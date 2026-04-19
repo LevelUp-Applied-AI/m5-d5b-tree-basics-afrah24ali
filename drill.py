@@ -11,55 +11,64 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import precision_score, recall_score, f1_score
 
+df = pd.read_csv("data/telecom_churn.csv")
 
+features = ["tenure","monthly_charges","total_charges","num_support_calls","senior_citizen","has_partner","has_dependents",
+"contract_months"
+]
+
+X = df[features]
+y = df["churned"]
+
+print("NaNs in features:", X[features].isnull().sum())
+print("Data types:\n", X[features].dtypes)
+X['total_charges'] = pd.to_numeric(X['total_charges'], errors='coerce').fillna(0)
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    stratify=y,
+    random_state=42
+)
 def train_decision_tree(X_train, y_train, max_depth=5, random_state=42):
-    """Train a DecisionTreeClassifier.
+    model = DecisionTreeClassifier(
+        max_depth=max_depth,
+        random_state=random_state
+    )
+    model.fit(X_train,y_train)
+    return model
 
-    Args:
-        X_train: Training features.
-        y_train: Training labels.
-        max_depth: Maximum tree depth.
-        random_state: Random seed.
-
-    Returns:
-        Fitted DecisionTreeClassifier.
-    """
-    # TODO: Create and fit a DecisionTreeClassifier
-    pass
 
 
 def get_feature_importances(model, feature_names):
-    """Extract feature importances sorted by importance (descending).
-
-    Args:
-        model: Fitted tree-based model with feature_importances_ attribute.
-        feature_names: List of feature names.
-
-    Returns:
-        Dictionary mapping feature name to importance value, sorted descending.
-    """
-    # TODO: Extract importances and return as a sorted dictionary
-    pass
-
+   importances = model.feature_importances_
+   pairs = zip (feature_names,importances)
+   sorted_pairs = sorted (pairs,
+    key = lambda x : x[1],
+    reverse= True
+)    
+   return dict(sorted_pairs)
 
 def train_balanced_forest(X_train, y_train, X_test, y_test,
                           n_estimators=100, random_state=42):
-    """Train a RandomForest with balanced class weights and return metrics.
+    model = RandomForestClassifier(
+        n_estimators=n_estimators,
+        class_weight="balanced",
+        min_samples_split=5,
+        random_state=random_state
+    )
+    model.fit(X_train,y_train)
+    y_pred =model.predict(X_test)
+    print("RF predictions unique:", np.unique(y_pred, return_counts=True))
+    print("Test set distribution:", np.bincount(y_test))
 
-    Args:
-        X_train, y_train: Training data.
-        X_test, y_test: Test data.
-        n_estimators: Number of trees.
-        random_state: Random seed.
-
-    Returns:
-        Dictionary with keys: 'precision', 'recall', 'f1'.
-    """
-    # TODO: Train RandomForestClassifier with class_weight='balanced',
-    #       predict on test set, compute and return metrics
-    pass
-
-
+    return{
+        "precision":precision_score(y_test,y_pred,average='binary'),
+        "recall":recall_score(y_test,y_pred,average ='binary'),
+        "f1":f1_score(y_test,y_pred,average='binary')
+    }
+    
 if __name__ == "__main__":
     df = pd.read_csv("data/telecom_churn.csv")
     features = ["tenure", "monthly_charges", "total_charges",
